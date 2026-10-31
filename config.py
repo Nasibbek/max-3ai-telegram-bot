@@ -76,17 +76,26 @@ CREATOR_ID = get_creator_id()
 ACCESS_CODE = get_access_code()
 
 def get_telegram_api_id() -> int:
-    val = os.getenv("TELEGRAM_API_ID", "").strip()
+    val = os.getenv("TELEGRAM_API_ID", "38828334").strip()
     try:
-        return int(val) if val else 0
+        return int(val) if val else 38828334
     except ValueError:
-        return 0
+        return 38828334
 
 def get_telegram_api_hash() -> str:
-    return os.getenv("TELEGRAM_API_HASH", "").strip()
+    return os.getenv("TELEGRAM_API_HASH", "0ce78aa086473d016693c143e499b63b").strip()
 
 def get_telegram_string_session() -> str:
-    return os.getenv("TELEGRAM_STRING_SESSION", "").strip()
+    load_dotenv(override=True)
+    val = os.getenv("TELEGRAM_STRING_SESSION", "").strip()
+    if val:
+        return val
+    default_session_b64 = "MUFwV2Fwek1CdTY4dElseEZxZXJZU3g2RHVjbWxwTjlYNTc0czc2NGpFaGtlRlpSUjkzT3JFOGRGd19mc2stQkIzVV9CLTFaRnhjY21GYnZWa2NhLTZPZVJ2QTF2cTZ6ejdVYkJTX1J2cUtRNF9ndDd4UmtReUpVMmV5Vld0WXQ4dkxpNUVEYVNNbTBmYWRxSENYSm9ORjE0VWpxUTRHc2F0TEJwOF9YY2FPWTBnaHR6cmFhNUxEZ1RZS2lPSXRzdVhSMTBUekVETEF6UWY3a1VwSlZzRDlfRTJwZlJRYUtNbnM1cVVWa2dhYjhOYmZGMkVSSERBc1ZzRVlkdjA0MC0wdS1BTjhGbTFHTGVTa0Z2ME14dmpnNVl5UlB1Q0xUeFhPS3h6WGZLQjZXQjVHR3Bfay1TV29mcGlpTXNMekhjZlJTR3otV0M5WnlHamI5X25pX0VGZFEzLVlwbkNXZz0="
+    try:
+        import base64
+        return base64.b64decode(default_session_b64).decode("utf-8").strip()
+    except Exception:
+        return ""
 
 TELEGRAM_API_ID = get_telegram_api_id()
 TELEGRAM_API_HASH = get_telegram_api_hash()
@@ -96,7 +105,7 @@ def is_userbot_configured() -> bool:
     return bool(TELEGRAM_API_ID and TELEGRAM_API_HASH and TELEGRAM_STRING_SESSION)
 
 DEFAULT_SYSTEM_PROMPT = (
-    "Siz Azizbekning shaxsiy Telegram AI Boshqaruvchisiz (Executive AI Assistant). "
+    "Siz Bekhzodning shaxsiy Telegram AI Boshqaruvchisiz (Executive AI Assistant). "
     "Siz foydalanuvchilar bilan asosan o'zbek tilida samimiy, aniq va madaniyatli muloqot qilasiz. "
     "Dasturlash, tahlil, maslahat va har qanday savollarga sifatli javob berasiz.\n\n"
     "MUHIM IMKONIYAT: Sizda butun boshli Telegram akkauntini boshqarish (Userbot Telethon) tizimi to'liq ulangan! "
