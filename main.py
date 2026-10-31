@@ -1,0 +1,139 @@
+import asyncio
+import logging
+import os
+import sys
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+from aiohttp import web
+import config
+from handlers import router
+from userbot_service import userbot
+
+# Loglarni sozlash
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+async def health_check(request):
+    """Render.com yoki boshqa serverlar uchun salomatlik tekshiruvi (Health Check)"""
+    return web.Response(text="Bot is running! 🤖", status=200)
+
+async def keep_alive_ping():
+    """Render.com bepul tarifida 15 daqiqalik uxlab qolishni (Cold Start / Spin down) oldini olish"""
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        return
+    import aiohttp
+    logger.info(f"Render keep-alive faollashtirildi: {render_url}")
+    while True:
+        try:
+            await asyncio.sleep(600)  # Har 10 daqiqada o'zini-o'zi uyg'otib turadi
+            async with aiohttp.ClientSession() as session:
+                async with session.get(render_url) as resp:
+                    pass
+        except Exception:
+            pass
+
+async def start_web_server():
+    """Render.com Free Web Service uchun portni tinglash"""
+    port = int(os.getenv("PORT", 8080))
+    app = web.Application()
+    app.router.add_get("/", health_check)
+    app.router.add_get("/health", health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"Render health-check server ishga tushdi: port {port}")
+    asyncio.create_task(keep_alive_ping())
+
+async def set_bot_commands(bot: Bot):
+    """Telegram menyusida chiqadigan buyruqlar ro'yxatini sozlash"""
+    commands = [
+        BotCommand(command="start", description="Botni ishga tushirish"),
+        BotCommand(command="sendmsg", description="Chatga xabar yuborish"),
+        BotCommand(command="admin", description="Boshqaruv paneli"),
+        BotCommand(command="agent", description="AI Kotib (Userbot) paneli"),
+        BotCommand(command="mychats", description="Chatlarim va kanallarim"),
+        BotCommand(command="adapt", description="Menga moslashish sozlamalari"),
+        BotCommand(command="blacklist", description="Qora ro'yxat"),
+        BotCommand(command="ai", description="AI ga savol berish"),
+        BotCommand(command="reset", description="Suhbat tarixini tozalash"),
+        BotCommand(command="help", description="Qo'llanma va yordam"),
+    ]
+    await bot.set_my_commands(commands)
+
+async def main():
+    logger.info("Bot ishga tushmoqda...")
+    
+    # Render.com uchun web-serverni ishga tushirish (agar PORT mavjud bo'lsa)
+    if os.getenv("PORT") or os.getenv("RENDER"):
+        await start_web_server()
+    
+    # Konfiguratsiya tekshiruvi
+    if not config.validate_config():
+        logger.error("Konfiguratsiya to'liq emas. Bot to'xtatildi.")
+        sys.exit(1)
+
+    # Bot va Dispatcher yaratish
+    bot = Bot(
+        token=config.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+    )
+    dp = Dispatcher()
+
+    # Routerni ro'yxatdan o'tkazish
+    dp.include_router(router)
+
+    # Menyu buyruqlarini o'rnatish
+    await set_bot_commands(bot)
+
+    # Shaxsiy Telegram AI Agentini (Userbot) ishga tushirish
+    userbot.set_bot_instance(bot)
+    if config.is_userbot_configured():
+        logger.info("Shaxsiy Telegram AI Agenti (Userbot) ulanmoqda...")
+        await userbot.start()
+    else:
+        logger.info("Userbot hozircha ulanmagan. Ulanish uchun TELEGRAM_STRING_SESSION talab qilinadi.")
+
+    # Bot ma'lumotlarini chop etish
+    bot_info = await bot.get_me()
+    logger.info(f"Bot muvaffaqiyatli ishga tushdi: @{bot_info.username} ({bot_info.first_name})")
+    print(f"\n" + "=" * 50)
+    print(f"✅ Bot faol: @{bot_info.username}")
+    print(f"🤖 Gemini modeli: {config.GEMINI_MODEL}")
+    print(f"👑 Yaratuvchi ID: {config.CREATOR_ID}")
+    agent_st = userbot.get_status()
+    print(f"📱 Shaxsiy AI Agent: {'🟢 Faol' if agent_st['connected'] else '🔴 Ulanmagan'}")
+    print("=" * 50 + "\n")
+
+    # Eski kutilayotgan yangilanishlarni o'tkazib yuborish
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    # Polling boshlash
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await userbot.stop()
+        await bot.session.close()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot to'xtatildi.")
