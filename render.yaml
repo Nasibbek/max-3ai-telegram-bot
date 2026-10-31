@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: max-3ai-telegram-bot
+    name: nasibbek-3ai-telegram-bot
     runtime: python
     plan: free
     region: frankfurt
@@ -10,16 +10,11 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.4
       - key: BOT_TOKEN
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
+        value: "9177443321:AAHhglqEgESpcIw5lTYCouioudefYQ9Pr38"
       - key: GEMINI_MODEL
-        value: gemini-3.8-flash
+        value: gemini-2.5-flash
       - key: CREATOR_ID
-        value: "5772939710"
-      - key: TELEGRAM_API_ID
-        sync: false
-      - key: TELEGRAM_API_HASH
-        sync: false
-      - key: TELEGRAM_STRING_SESSION
-        sync: false
+        value: "5830675049"
+      - key: ACCESS_CODE
+        value: "7777"
+
